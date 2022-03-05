@@ -16,7 +16,7 @@ func TestName(t *testing.T) {
 	})
 	minute := time.Now().Minute()
 	key := "zA21X31:" + strconv.Itoa(minute)
-	err := RateLimitMiddleware(rdb, ctx, key)
+	err := RateLimit(rdb, ctx, key, 3, PerMinute())
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -19,7 +19,7 @@ var ErrRequestLimitExceeded = errors.New("request limit exceeded")
 //     EXPIRE pipeline_counts 59
 //     EXEC
 // using one rdb-server roundtrip.
-func RateLimitMiddleware(rdb *redis.Client, ctx context.Context, key string) error {
+func RateLimit(rdb *redis.Client, ctx context.Context, key string, limit int, perTime time.Duration) error {
 	val, err := rdb.Get(ctx, key).Result()
 	countRequest := 0
 	if err != nil {
@@ -35,18 +35,32 @@ func RateLimitMiddleware(rdb *redis.Client, ctx context.Context, key string) err
 			return ErrInternal
 		}
 	}
-	fmt.Println("contRequest", countRequest)
-	if countRequest > 3 {
+	if countRequest > limit {
 		return ErrRequestLimitExceeded
 	}
 	pipe := rdb.TxPipeline()
-	incr := pipe.Incr(ctx, key)
-	pipe.Expire(ctx, key, time.Minute-1)
+	_ = pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, perTime)
 
 	_, err = pipe.Exec(ctx)
-	fmt.Println(incr.Val(), err)
 	if err != nil {
 		return ErrInternal
 	}
 	return nil
+}
+
+func PerSecond() time.Duration {
+	return time.Hour - 1
+}
+
+func PerMinute() time.Duration {
+	return time.Minute - 1
+}
+
+func PerHour() time.Duration {
+	return time.Hour - 1
+}
+
+func PerDay() time.Duration {
+	return 24*time.Hour - 1
 }
